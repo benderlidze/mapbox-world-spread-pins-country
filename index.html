@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>DEVs</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <style>
+        .marker {
+            background-image: url('https://docs.mapbox.com/mapbox-gl-js/assets/pin.svg');
+            background-size: cover;
+            cursor: pointer;
+        }
+    </style>
+
+    <div id="map"></div>
+
+    <script>
+        mapboxgl.accessToken =
+            "pk.eyJ1IjoicmF5bG9wZXphbGVtYW4iLCJhIjoiY2trcHc3ODY4MGNycTJwcGE0MW5pcDNnMSJ9.gHtN2ew2g26gY7KSMzFBpw"
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: { lng: 3.413839906558991, lat: 45.981566477305165 },
+            zoom: 5
+        });
+
+        map.on('style.load', () => {
+
+            Promise.all([
+                d3.csv("data/users.csv"),
+                d3.csv("data/time_zone.csv"),
+                fetch("data/world-administrative-boundaries.json").then(response => response.json())
+            ]).then(data => {
+                console.log('data', data);
+                const [users, zones, geojson] = data;
+
+
+                const timeZone = new Map()
+                zones.map(i => { timeZone.set(i.zone, i.iso) })
+
+
+                console.log('users', users);
+                users.forEach(i => {
+                    i.iso = timeZone.get(i.timeZone)
+                })
+
+                //FIND EMPTY ISO USER CODES
+                const emptyISO = [...new Set(users.filter(i => !i.iso).map(i => i.timeZone))]
+                emptyISO.length > 0 && console.error('emptyISO', emptyISO);
+
+
+                //count how many users per country
+                const pinNumberInCountry = users.reduce((acc, i) => {
+                    acc[i.iso] = acc[i.iso] ? acc[i.iso] + 1 : 1
+                    return acc
+                }, {})
+                const pinCountryNames = Object.keys(pinNumberInCountry).map(name => name.toLowerCase())
+                console.log('pinCountryNames', pinCountryNames);
+
+                //generate pins inside every country
+                const countries = geojson.features.filter(i => pinCountryNames.includes(i.properties.iso_3166_1_.toLowerCase()))
+                console.log('countries', countries);
+
+                const pins = countries
+                    //.filter(i => i.properties.iso_3166_1_ === 'SC')
+                    .map(country => {
+                        const iso = country.properties.iso_3166_1_
+
+                        // const pins = Array.from({ length: 1000 })
+                        //     .map(() => {
+                        //         const rnd = turf.point(turf.randomPosition(bboxCountry))
+                        //         return rnd
+                        //     })
+                        //     .filter(i => turf.booleanPointInPolygon(i, country))
+                        //     .splice(0, +pinNumberInCountry[iso])
+
+                        const countryPins = generatePins(country, +pinNumberInCountry[iso])
+
+                        console.log('countryPins', countryPins);
+                        console.log('country', country.properties.iso_3166_1_, +pinNumberInCountry[iso]);
+
+                        return countryPins
+                    })
+                console.log('pins', pins);
+
+                map.addSource('pins', {
+                    'type': 'geojson',
+                    'data': turf.featureCollection(pins.flat())
+                });
+                map.addLayer({
+                    'id': 'pins',
+                    'type': 'circle',
+                    'source': 'pins',
+                    'layout': {},
+                    'paint': {
+                        'circle-color': '#f00',
+                        'circle-radius': 4,
+                        'circle-stroke-width': 1,
+                        'circle-stroke-color': '#fff'
+                    }
+                });
+
+
+            })
+
+
+
+            fetch("data/world-administrative-boundaries.json")
+                .then(response => response.json())
+                .then(data => {
+                    console.log('data', data);
+
+                    const country = data.features.filter(i => i.properties.iso_3166_1_ === 'SC')
+                    map.addSource('countries', {
+                        'type': 'geojson',
+                        'data': turf.featureCollection(country)
+                    });
+                    map.addLayer({
+                        'id': 'countries',
+                        'type': 'fill',
+                        'source': 'countries',
+                        'layout': {},
+                        'paint': {
+                            'fill-color': '#088',
+                            'fill-opacity': 0.1
+                        }
+                    });
+
+                });
+
+            map.setFog({}); // Set the default atmosphere style
+
+
+
+            function generatePins(countryGeometry, pinNumber) {
+                let iterationCount = 0
+                //generate random points inside country geometry till we have points = pinNumber
+                const bboxCountry = turf.bbox(countryGeometry)
+                const pins = []
+                while (pins.length < pinNumber) {
+                    iterationCount++
+                    const pin = turf.point(turf.randomPosition(bboxCountry))
+                    turf.booleanPointInPolygon(pin, countryGeometry) && pins.push(pin)
+                }
+                console.log('iterationCount', iterationCount);
+                return pins
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>
