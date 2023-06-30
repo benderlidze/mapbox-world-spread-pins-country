@@ -22,6 +22,76 @@
             bottom: 0;
             width: 100%;
         }
+
+        .ava {
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+        }
+
+        .popup {
+            max-width: 500px;
+            min-width: 400px;
+        }
+
+        .mapboxgl-popup-content {
+            background-color: #232136 !important;
+            border: 2px solid #f4a242 !important;
+        }
+
+        .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+            border-top-color: #f4a242 !important;
+        }
+
+        .container {
+            display: flex;
+            background-color: #232136;
+            padding: 10px;
+            color: white;
+        }
+
+        .skill {
+            margin-right: 5px;
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            background-color: #4f4d5e;
+            color: white;
+        }
+
+        .right {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            padding-left: 20px;
+        }
+
+        .hiringStatus {
+            display: flex;
+            margin: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            color: white;
+            border: 1px solid #f4a242 !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .skills {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 
@@ -41,7 +111,7 @@
             "pk.eyJ1IjoicmF5bG9wZXphbGVtYW4iLCJhIjoiY2trcHc3ODY4MGNycTJwcGE0MW5pcDNnMSJ9.gHtN2ew2g26gY7KSMzFBpw"
         const map = new mapboxgl.Map({
             container: 'map',
-            style: 'mapbox://styles/mapbox/light-v11',
+            style: 'mapbox://styles/mapbox/dark-v11',
             center: { lng: 3.413839906558991, lat: 45.981566477305165 },
             zoom: 5
         });
@@ -87,27 +157,30 @@
                     //.filter(i => i.properties.iso_3166_1_ === 'SC')
                     .map(country => {
                         const iso = country.properties.iso_3166_1_
-
-                        // const pins = Array.from({ length: 1000 })
-                        //     .map(() => {
-                        //         const rnd = turf.point(turf.randomPosition(bboxCountry))
-                        //         return rnd
-                        //     })
-                        //     .filter(i => turf.booleanPointInPolygon(i, country))
-                        //     .splice(0, +pinNumberInCountry[iso])
-
                         const countryPins = generatePins(country, +pinNumberInCountry[iso])
-
-                        console.log('countryPins', countryPins);
-                        console.log('country', country.properties.iso_3166_1_, +pinNumberInCountry[iso]);
-
                         return countryPins
-                    })
+                    }).flat()
+
+
+                pins.forEach(pin => {
+                    //pins.filter(pin.).find(pin => pin.properties.iso_3166_1_ === user.iso)
+                    const user = users
+                        .filter(u => !u.checked)
+                        .find(i => i.iso === pin.properties.iso)
+
+                    if (user) {
+                        pin.properties = user
+                        pin.properties.userName = user.firstName + ' ' + user.lastName
+                        user.checked = true
+                    }
+                })
+
+
                 console.log('pins', pins);
 
                 map.addSource('pins', {
                     'type': 'geojson',
-                    'data': turf.featureCollection(pins.flat())
+                    'data': turf.featureCollection(pins)
                 });
                 map.addLayer({
                     'id': 'pins',
@@ -116,12 +189,151 @@
                     'layout': {},
                     'paint': {
                         'circle-color': '#f00',
-                        'circle-radius': 4,
+                        'circle-radius': 1,
                         'circle-stroke-width': 1,
                         'circle-stroke-color': '#fff'
                     }
                 });
 
+                map.addLayer({
+                    'id': 'devs',
+                    'type': 'symbol',
+                    'source': 'pins',
+                    'layout': {
+                        'text-field': ["to-string", ["get", "userName"]],
+                        'text-font': [
+                            "step",
+                            ["zoom"],
+                            [
+                                "step",
+                                ["get", "rank"],
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans ExtraBold",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ],
+                                100,
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans Bold",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ],
+                                1000,
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans SemiBold",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ],
+                                10000,
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans Regular",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ]
+                            ],
+                            22,
+                            [
+                                "step",
+                                ["get", "rank"],
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans ExtraBold",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ],
+                                250.5,
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans Bold",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ],
+                                500,
+                                [
+                                    "literal",
+                                    [
+                                        "Open Sans Regular",
+                                        "Arial Unicode MS Regular"
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'text-size': [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            0,
+                            [
+                                "interpolate",
+                                ["exponential", 1.21],
+                                ["get", "sum"],
+                                9.152710914611816,
+                                7.5,
+                                41.76505661010742,
+                                11
+                            ],
+                            10,
+                            [
+                                "interpolate",
+                                ["exponential", 1.5],
+                                ["get", "sum"],
+                                9.152710914611816,
+                                12,
+                                35,
+                                20
+                            ]
+                        ],
+                    },
+                    'paint': {
+                        "text-color": "hsl(0, 10%, 98%)"
+                    }
+                });
+
+                const popup = new mapboxgl.Popup({
+                    className: 'popup',
+                    offset: [0, -10],
+                    maxWidth: 500,
+                });
+
+                map.on('click', 'devs', (e) => {
+                    const props = e.features[0].properties;
+                    console.log('props', props);
+
+                    const skills = JSON.parse(props.skills).map(i => `<div class="skill">${i}</div>`).splice(0, 5).join('')
+
+                    const text = `
+                        <div class="container">
+                            <div class="right">
+                                <div class="ava">
+                                    <img src="${props.lockedAvatar}" class="avatar" alt="">
+                                    <div class="hiringStatus">${props.hiringStatus}</div>
+                                </div>
+                                <div class="name">${props.userName}</div>
+                                <div class="time">${props.timeZone}</div>
+                                <div class="expectedSalary">&euro; ${props.expectedSalary}</div>
+                            </div>
+                            <div class="left">
+                                <div class="skills">${skills}</div>
+                                <div class="description">${props.description}</div>
+                            </div>
+                        </div>
+                    `
+
+                    popup
+                        .setLngLat(e.features[0].geometry.coordinates)
+                        .setHTML(text)
+                        .addTo(map);
+                });
 
             })
 
@@ -152,8 +364,6 @@
 
             map.setFog({}); // Set the default atmosphere style
 
-
-
             function generatePins(countryGeometry, pinNumber) {
                 let iterationCount = 0
                 //generate random points inside country geometry till we have points = pinNumber
@@ -161,10 +371,13 @@
                 const pins = []
                 while (pins.length < pinNumber) {
                     iterationCount++
-                    const pin = turf.point(turf.randomPosition(bboxCountry))
+                    const pin = turf.point(turf.randomPosition(bboxCountry), {
+                        name: countryGeometry.properties.name,
+                        iso: countryGeometry.properties.iso_3166_1_
+                    })
                     turf.booleanPointInPolygon(pin, countryGeometry) && pins.push(pin)
                 }
-                console.log('iterationCount', iterationCount);
+                // console.log('iterationCount', iterationCount, countryGeometry.properties.name);
                 return pins
             }
         });
