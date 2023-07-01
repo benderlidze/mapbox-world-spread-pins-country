@@ -10,10 +10,15 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
+    <!-- css -->
+    <link rel="stylesheet" href="css/style.css">
+
+
     <style>
         body {
             margin: 0;
             padding: 0;
+            font-family: "Gotham Book", sans-serif;
         }
 
         #map {
@@ -26,25 +31,28 @@
         .ava {
             display: flex;
             align-items: center;
+            margin-bottom: 10px;
         }
 
         .avatar {
             width: 60px;
-            height: 60px;
         }
 
-        .popup {
-            max-width: 500px;
-            min-width: 400px;
-        }
 
         .mapboxgl-popup-content {
             background-color: #232136 !important;
             border: 2px solid #f4a242 !important;
+            font-family: "Gotham Book", sans-serif !important;
+            width: 601px;
         }
 
         .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
             border-top-color: #f4a242 !important;
+        }
+
+        .name {
+            font-size: 20px;
+            font-weight: bold;
         }
 
         .container {
@@ -55,8 +63,7 @@
         }
 
         .skill {
-            margin-right: 5px;
-            margin-top: 5px;
+            margin: 5px;
             padding: 5px;
             border-radius: 5px;
             background-color: #4f4d5e;
@@ -66,14 +73,18 @@
         .right {
             display: flex;
             flex-direction: column;
+            flex: 1 1 40%;
+            /* or flex: 0 0 50%; */
         }
 
         .left {
             display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            align-items: flex-start;
+            flex-direction: column;
             padding-left: 20px;
+            flex: 1 1 60%;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            /* or flex: 0 0 50%; */
         }
 
         .hiringStatus {
@@ -90,7 +101,61 @@
         .skills {
             display: flex;
             flex-direction: row;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .headline {
+            color: rgb(214, 214, 214)
+        }
+
+        .salary>.value {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .salary>.descr {
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .info {
+            padding-top: 10px;
+        }
+
+        .s-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .s-list {
+            display: flex;
+            flex-direction: row;
             flex-wrap: wrap;
+        }
+
+        .s-text {
+            display: flex;
+            align-items: center;
+        }
+
+        .hire-button {
+            background-color: #2baff6;
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px;
+            text-decoration: none;
+
         }
     </style>
 </head>
@@ -118,6 +183,14 @@
 
         map.on('style.load', () => {
 
+            //load image to mapbox 
+            map.loadImage('data/Avatar_small.png',
+                (error, image) => {
+                    if (error) throw error;
+                    // Add the image to the map style.
+                    map.addImage('avatar', image);
+                })
+
             Promise.all([
                 d3.csv("data/users.csv"),
                 d3.csv("data/time_zone.csv"),
@@ -132,9 +205,13 @@
 
 
                 console.log('users', users);
+
+                const avatars = [];
                 users.forEach(i => {
                     i.iso = timeZone.get(i.timeZone)
+                    avatars.push(i.lockedAvatar)
                 })
+
 
                 //FIND EMPTY ISO USER CODES
                 const emptyISO = [...new Set(users.filter(i => !i.iso).map(i => i.timeZone))]
@@ -170,7 +247,7 @@
 
                     if (user) {
                         pin.properties = user
-                        pin.properties.userName = user.firstName + ' ' + user.lastName
+                        pin.properties.userName = user.firstName[0] + ' ' + user.lastName[0]
                         user.checked = true
                     }
                 })
@@ -196,78 +273,25 @@
                 });
 
                 map.addLayer({
+                    'id': 'points',
+                    'type': 'symbol',
+                    'source': 'pins', // reference the data source
+                    'layout': {
+                        'icon-image': 'avatar', // reference the image
+                        'icon-size': 1,
+                        'icon-allow-overlap': true,
+                        //offset icon 
+                        'icon-offset': [0, -25],
+
+                    }
+                });
+
+                map.addLayer({
                     'id': 'devs',
                     'type': 'symbol',
                     'source': 'pins',
                     'layout': {
                         'text-field': ["to-string", ["get", "userName"]],
-                        'text-font': [
-                            "step",
-                            ["zoom"],
-                            [
-                                "step",
-                                ["get", "rank"],
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans ExtraBold",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ],
-                                100,
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans Bold",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ],
-                                1000,
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans SemiBold",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ],
-                                10000,
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans Regular",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ]
-                            ],
-                            22,
-                            [
-                                "step",
-                                ["get", "rank"],
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans ExtraBold",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ],
-                                250.5,
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans Bold",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ],
-                                500,
-                                [
-                                    "literal",
-                                    [
-                                        "Open Sans Regular",
-                                        "Arial Unicode MS Regular"
-                                    ]
-                                ]
-                            ]
-                        ],
                         'text-size': [
                             "interpolate",
                             ["linear"],
@@ -305,11 +329,96 @@
                     maxWidth: 500,
                 });
 
-                map.on('click', 'devs', (e) => {
+                map.on('click', 'points', showPopup);
+                map.on('click', 'devs', showPopup);
+
+                function showPopup(e) {
                     const props = e.features[0].properties;
                     console.log('props', props);
 
-                    const skills = JSON.parse(props.skills).map(i => `<div class="skill">${i}</div>`).splice(0, 5).join('')
+
+                    const salary = +props.expectedSalary > 0 ? `<div class="salary">
+                        <span class="value">&euro;${props.expectedSalary}</span>
+                        <span class="descr">/ month as employee</span>
+                    </div>` : ''
+
+
+                    const rate = +props.contractorRate > 0 ? `<div class="salary">
+                        <span class="value">&euro;${props.contractorRate}</span>
+                        <span class="descr">/ hour as contractor</span>
+                    </div>` : ''
+
+                    const country = props.timeZone ? `<div class="salary">
+                        <span class="value">${props.timeZone}</span>
+                        <span class="descr">(GMT +1)</span>
+                    </div>` : ''
+
+                    const seniority = `
+                        <div class="skills">
+                            <div class="s-icon">
+                                <svg style="width:20px;height:20px;" viewBox="0 0 16 16" width="1em" height="1em" focusable="false" role="img" aria-label="bug" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi-bug b-icon bi">
+                                    <g data-v-f3f6d422="" transform="translate(8 8) scale(1 1) translate(-8 -8)"><path d="M13.468 12.37C12.758 11.226 11.195 10 8 10s-4.757 1.225-5.468 2.37A6.987 6.987 0 0 0 8 15a6.987 6.987 0 0 0 5.468-2.63z"></path><path fill-rule="evenodd" d="M8 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path fill-rule="evenodd" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"></path></g>
+                                </svg>
+                            </div>
+                            <div class="s-list">
+                                ${JSON.parse(props.seniority).map(i => `<div class="s-text"> ${i}</div>`).join(' <div class="s-text">/</div>')}
+                                ${JSON.parse(props.preferredRoles).map(i => `<div class="skill"> ${i}</div>`).join('')}
+                            </div>
+                        </div>
+                    `
+                    const skills = `
+                        <div class="skills">
+                            <div class="s-icon">
+                                <svg style="width:20px;height:20px;" viewBox="0 0 16 16" width="1em" height="1em" focusable="false" role="img" aria-label="bug" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi-bug b-icon bi">
+                                    <g data-v-f3f6d422="" transform="translate(8 8) scale(1 1) translate(-8 -8)"><path fill-rule="evenodd" d="M4.355.522a.5.5 0 0 1 .623.333l.291.956A4.979 4.979 0 0 1 8 1c1.007 0 1.946.298 2.731.811l.29-.956a.5.5 0 1 1 .957.29l-.41 1.352A4.985 4.985 0 0 1 13 6h.5a.5.5 0 0 0 .5-.5V5a.5.5 0 0 1 1 0v.5A1.5 1.5 0 0 1 13.5 7H13v1h1.5a.5.5 0 0 1 0 1H13v1h.5a1.5 1.5 0 0 1 1.5 1.5v.5a.5.5 0 1 1-1 0v-.5a.5.5 0 0 0-.5-.5H13a5 5 0 0 1-10 0h-.5a.5.5 0 0 0-.5.5v.5a.5.5 0 1 1-1 0v-.5A1.5 1.5 0 0 1 2.5 10H3V9H1.5a.5.5 0 0 1 0-1H3V7h-.5A1.5 1.5 0 0 1 1 5.5V5a.5.5 0 0 1 1 0v.5a.5.5 0 0 0 .5.5H3c0-1.364.547-2.601 1.432-3.503l-.41-1.352a.5.5 0 0 1 .333-.623zM4 7v4a4 4 0 0 0 3.5 3.97V7H4zm4.5 0v7.97A4 4 0 0 0 12 11V7H8.5zM12 6H4a3.99 3.99 0 0 1 1.333-2.982A3.983 3.983 0 0 1 8 2c1.025 0 1.959.385 2.666 1.018A3.989 3.989 0 0 1 12 6z"></path></g>
+                                </svg>
+                            </div>
+                            <div class="s-list">
+                                ${JSON.parse(props.skills).map(i => `<div class="skill"> ${i}</div>`).splice(0, 5).join('')}
+                            </div>
+                        </div>
+                    `
+                    const workHistory = `
+                        <div class="skills">
+                            <div class="s-icon">
+                                <svg style="width:20px;height:20px;" viewBox="0 0 16 16" width="1em" height="1em" focusable="false" role="img" aria-label="bug" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi-bug b-icon bi">
+                                    <g transform="translate(8 8) scale(1 1) translate(-8 -8)"><path fill-rule="evenodd" d="M0 12.5A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-6h-1v6a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-6H0v6z"></path><path fill-rule="evenodd" d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5v2.384l-7.614 2.03a1.5 1.5 0 0 1-.772 0L0 6.884V4.5zM1.5 4a.5.5 0 0 0-.5.5v1.616l6.871 1.832a.5.5 0 0 0 .258 0L15 6.116V4.5a.5.5 0 0 0-.5-.5h-13zM5 2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V3h-1v-.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V3H5v-.5z"></path></g>
+                                </svg>
+                            </div>
+                            <div class="s-list">
+                                ${JSON.parse(props.workHistory).map(i => `<div> ${i.company}</div>`).join(', ')}
+                            </div>
+                        </div>
+                    `
+
+                    const education = props.education ? `
+                        <div class="skills">
+                            <div class="s-icon">
+                                <svg height="20px" width="20px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+                                viewBox="0 0 245.827 245.827" xml:space="preserve">
+                                    <g>
+                                        <g>
+                                            <g>
+                                                <path style="fill:white;" d="M223.336,148.384l-0.137-23.527l22.628-12.662L122.576,47.195L0,113.495l49.144,28.216
+                                                    l0.098,16.766l0.01,1.339l0.449-0.215c-0.518,0.703-0.85,1.426-0.84,2.149c0.039,8.246,33.326,14.772,74.41,14.548
+                                                    c41.064-0.215,74.302-7.122,74.273-15.349c0-0.723-0.381-1.426-0.889-2.149l0.449,0.215v-1.339l-0.088-16.834l21.309-13.258
+                                                    l0.117,20.83c-2.345,1.006-3.976,3.312-3.957,6.009c0.02,3.537,2.892,6.399,6.458,6.37c3.586-0.02,6.429-2.912,6.409-6.439
+                                                    C227.332,151.657,225.691,149.371,223.336,148.384z M123.241,170.621c-36.452,0.205-66.017-3.801-66.046-8.91
+                                                    c-0.029-5.11,29.496-9.399,65.949-9.585c36.462-0.205,66.017,3.781,66.037,8.881
+                                                    C189.209,166.098,159.703,170.426,123.241,170.621z M195.335,127.183c-4.934-5.188-22.618-18.886-72.426-18.602
+                                                    c-49.877,0.264-67.336,14.128-72.211,19.394l-0.029-4.963c0,0,14.147-21.524,72.202-21.827
+                                                    c58.025-0.313,72.436,21.045,72.436,21.045L195.335,127.183z M215.755,162.199l-2.511,36.433
+                                                    c7.767-12.203,14.255-7.66,14.255-7.66l-0.156-28.832C218.998,165.414,215.755,162.199,215.755,162.199z"/>
+                                            </g>
+                                        </g>
+                                    </g>
+                                    </svg>
+
+                            </div>
+                            ${[JSON.parse(props.education)].map(i => `<div> ${i.institution}, ${i.degree} ${i.subject}  (${i.graduationYear})</div>`).join(', ')}
+                        </div>
+                    ` : ""
+
 
                     const text = `
                         <div class="container">
@@ -319,12 +428,19 @@
                                     <div class="hiringStatus">${props.hiringStatus}</div>
                                 </div>
                                 <div class="name">${props.userName}</div>
-                                <div class="time">${props.timeZone}</div>
-                                <div class="expectedSalary">&euro; ${props.expectedSalary}</div>
+                                <div class="headline">${props.headline}</div>
+                                <div class="info">
+                                ${country}
+                                ${salary}
+                                ${rate}
+                                <a class="hire-button" href="https://app.hashlist.com/hire-developers">Hire ${props.userName}</a>
+                                </div>
                             </div>
                             <div class="left">
-                                <div class="skills">${skills}</div>
-                                <div class="description">${props.description}</div>
+                                ${seniority}
+                                ${skills}
+                                ${workHistory}
+                                ${education}
                             </div>
                         </div>
                     `
@@ -333,7 +449,7 @@
                         .setLngLat(e.features[0].geometry.coordinates)
                         .setHTML(text)
                         .addTo(map);
-                });
+                }
 
             })
 
@@ -358,6 +474,8 @@
         });
 
     </script>
+
+
 
 </body>
 
