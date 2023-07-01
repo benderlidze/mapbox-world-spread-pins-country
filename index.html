@@ -184,7 +184,7 @@
         map.on('style.load', () => {
 
             //load image to mapbox 
-            map.loadImage('data/Avatar_small.png',
+            map.loadImage('data/output-onlinepngtools_small.png',
                 (error, image) => {
                     if (error) throw error;
                     // Add the image to the map style.
@@ -259,23 +259,25 @@
                     'type': 'geojson',
                     'data': turf.featureCollection(pins)
                 });
-                map.addLayer({
-                    'id': 'pins',
-                    'type': 'circle',
-                    'source': 'pins',
-                    'layout': {},
-                    'paint': {
-                        'circle-color': '#f00',
-                        'circle-radius': 1,
-                        // 'circle-stroke-width': 1,
-                        // 'circle-stroke-color': '#fff'
-                    }
-                });
+                // map.addLayer({
+                //     'id': 'pins',
+                //     'type': 'circle',
+                //     'source': 'pins',
+                //     'layout': {},
+                //     'paint': {
+                //         'circle-color': '#f00',
+                //         'circle-radius': 1,
+                //         // 'circle-stroke-width': 1,
+                //         // 'circle-stroke-color': '#fff'
+                //     }
+                // });
 
                 map.addLayer({
                     'id': 'points',
                     'type': 'symbol',
                     'source': 'pins', // reference the data source
+                    // zoom level
+                    'minzoom': 5,
                     'layout': {
                         'icon-image': 'avatar', // reference the image
                         'icon-size': 1,
