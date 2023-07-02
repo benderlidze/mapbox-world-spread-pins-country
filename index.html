@@ -43,7 +43,7 @@
             background-color: #232136 !important;
             border: 2px solid #f4a242 !important;
             font-family: "Gotham Book", sans-serif !important;
-            width: 601px;
+            border-radius: 12px !important;
         }
 
         .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
@@ -61,6 +61,22 @@
             padding: 10px;
             color: white;
         }
+
+        .popup {
+            max-width: 600px !important;
+            width: 600px !important;
+        }
+
+        @media screen and (max-width: 740px) {
+            .popup {
+                width: 80% !important;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+        }
+
 
         .skill {
             margin: 5px;
@@ -155,7 +171,6 @@
             justify-content: center;
             margin: 10px;
             text-decoration: none;
-
         }
     </style>
 </head>
@@ -184,7 +199,7 @@
         map.on('style.load', () => {
 
             //load image to mapbox 
-            map.loadImage('data/output-onlinepngtools_small.png',
+            map.loadImage('data/technologist_small.png',
                 (error, image) => {
                     if (error) throw error;
                     // Add the image to the map style.
@@ -277,14 +292,19 @@
                     'type': 'symbol',
                     'source': 'pins', // reference the data source
                     // zoom level
-                    'minzoom': 5,
+                    // 'minzoom': 5,
                     'layout': {
                         'icon-image': 'avatar', // reference the image
-                        'icon-size': 1,
-                        'icon-allow-overlap': true,
-                        //offset icon 
-                        'icon-offset': [0, -25],
+                        'icon-size': [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            2, 0.1,
+                            5, 0.8
+                        ],
 
+                        'icon-allow-overlap': true,
+                        'icon-offset': [0, -35],
                     }
                 });
 
@@ -327,17 +347,28 @@
 
                 const popup = new mapboxgl.Popup({
                     className: 'popup',
-                    offset: [0, -10],
-                    maxWidth: 500,
+                    offset: [0, -50],
+                    anchor: 'bottom'
                 });
 
                 map.on('click', 'points', showPopup);
                 map.on('click', 'devs', showPopup);
 
+                map.on("mousemove", "points", mousemove);
+                map.on("mouseleave", "points", mouseleave);
+                map.on("mousemove", "devs", mousemove);
+                map.on("mouseleave", "devs", mouseleave);
+
+                function mousemove() {
+                    map.getCanvas().style.cursor = 'pointer';
+                }
+                function mouseleave() {
+                    map.getCanvas().style.cursor = '';
+                }
+
                 function showPopup(e) {
                     const props = e.features[0].properties;
                     console.log('props', props);
-
 
                     const salary = +props.expectedSalary > 0 ? `<div class="salary">
                         <span class="value">&euro;${props.expectedSalary}</span>
@@ -368,7 +399,7 @@
                             </div>
                         </div>
                     `
-                    const skills = `
+                    const skills = props.skills ? `
                         <div class="skills">
                             <div class="s-icon">
                                 <svg style="width:20px;height:20px;" viewBox="0 0 16 16" width="1em" height="1em" focusable="false" role="img" aria-label="bug" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi-bug b-icon bi">
@@ -379,8 +410,9 @@
                                 ${JSON.parse(props.skills).map(i => `<div class="skill"> ${i}</div>`).splice(0, 5).join('')}
                             </div>
                         </div>
-                    `
-                    const workHistory = `
+                    ` : ""
+
+                    const workHistory = props.workHistory ? `
                         <div class="skills">
                             <div class="s-icon">
                                 <svg style="width:20px;height:20px;" viewBox="0 0 16 16" width="1em" height="1em" focusable="false" role="img" aria-label="bug" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi-bug b-icon bi">
@@ -391,7 +423,7 @@
                                 ${JSON.parse(props.workHistory).map(i => `<div> ${i.company}</div>`).join(', ')}
                             </div>
                         </div>
-                    `
+                    ` : ""
 
                     const education = props.education ? `
                         <div class="skills">
@@ -447,12 +479,26 @@
                         </div>
                     `
 
-                    popup
-                        .setLngLat(e.features[0].geometry.coordinates)
-                        .setHTML(text)
-                        .addTo(map);
-                }
+                    // Calculate the latitude offset based on the pixel distance
+                    var pixelDistance = 200; // Desired pixel distance
+                    var mapHeight = map.getContainer().offsetHeight;
+                    var latOffset = (pixelDistance / mapHeight) * (map.getBounds().getNorth() - map.getBounds().getSouth());
+                    // Get the coordinates
+                    var coordinates = e.features[0].geometry.coordinates // Replace with your desired coordinates
+                    // Add the latitude offset
+                    var newLatitude = coordinates[1] + latOffset;
+                    var newCoordinates = [coordinates[0], newLatitude];
 
+                    map.flyTo({
+                        center: newCoordinates
+                    });
+                    map.once("idle", () => {
+                        popup.setLngLat(coordinates)
+                            .setHTML(text)
+                            .addTo(map);
+                    });
+
+                }
             })
 
             map.setFog({}); // Set the default atmosphere style
