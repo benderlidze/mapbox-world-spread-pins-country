@@ -69,7 +69,7 @@
 
         @media screen and (max-width: 740px) {
             .popup {
-                width: 80% !important;
+                width: 95% !important;
             }
 
             .container {
@@ -122,7 +122,7 @@
         .skills {
             display: flex;
             flex-direction: row;
-            margin-bottom: 10px;
+            /* margin-bottom: 10px; */
             align-items: center;
         }
 
@@ -492,7 +492,7 @@
                     `
 
                     // Calculate the latitude offset based on the pixel distance
-                    var pixelDistance = 200; // Desired pixel distance
+                    var pixelDistance = 250; // Desired pixel distance
                     var mapHeight = map.getContainer().offsetHeight;
                     var latOffset = (pixelDistance / mapHeight) * (map.getBounds().getNorth() - map.getBounds().getSouth());
                     // Get the coordinates
