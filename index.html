@@ -74,6 +74,11 @@
 
             .container {
                 flex-direction: column;
+                padding: 0px;
+            }
+
+            .left {
+                padding-left: 0px;
             }
         }
 
@@ -209,22 +214,29 @@
             Promise.all([
                 d3.csv("data/users.csv"),
                 d3.csv("data/time_zone.csv"),
-                fetch("data/world-administrative-boundaries.json").then(response => response.json())
+                fetch("data/world-administrative-boundaries.json").then(response => response.json()),
+                d3.csv("data/country.csv")
             ]).then(data => {
                 console.log('data', data);
-                const [users, zones, geojson] = data;
+                const [users, zones, geojson, countryGMT] = data;
 
 
                 const timeZone = new Map()
-                zones.map(i => { timeZone.set(i.zone, i.iso) })
+                zones.map(i => { timeZone.set(i.zone, { ...i }) })
 
 
                 console.log('users', users);
+                console.log('countryGMT', countryGMT);
 
                 const avatars = [];
                 users.forEach(i => {
-                    i.iso = timeZone.get(i.timeZone)
+                    const zone = timeZone.get(i.timeZone)
+                    console.log('zone', zone);
+                    i.iso = zone.iso
+                    const coutry = countryGMT.find(c => c.iso.toLowerCase() === i.iso.toLowerCase())
+                    i.country = coutry ? coutry.name : ""
                     avatars.push(i.lockedAvatar)
+
                 })
 
 
@@ -382,8 +394,8 @@
                     </div>` : ''
 
                     const country = props.timeZone ? `<div class="salary">
-                        <span class="value">${props.timeZone}</span>
-                        <span class="descr">(GMT +1)</span>
+                        <span class="value">${props.country}</span>
+                        <span class="descr"></span>
                     </div>` : ''
 
                     const seniority = `
@@ -522,9 +534,6 @@
         });
 
     </script>
-
-
-
 </body>
 
 </html>
